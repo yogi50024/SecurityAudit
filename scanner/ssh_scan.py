@@ -8,10 +8,6 @@ import paramiko
 import os
 
 def ssh_scan(ip, user='root', key_path=None, commands=None):
-    """
-    Executes security scan commands on the given droplet over SSH.
-    Returns: dict of command -> output
-    """
     key_path = key_path or os.path.expanduser("~/.ssh/id_rsa")
     if commands is None:
         commands = [
