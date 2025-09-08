@@ -1,16 +1,12 @@
 """
 Open Ports Scanner
 
-Checks for open and potentially vulnerable ports on a droplet.
+Checks for open and potentially vulnerable ports on a droplet or host.
 """
 
 import socket
 
 def scan_ports(ip, ports=None):
-    """
-    Tries to connect to a list of ports on the given IP.
-    Returns: list of open ports.
-    """
     if ports is None:
         ports = [22, 80, 443, 3306, 5432, 8080]
     open_ports = []
