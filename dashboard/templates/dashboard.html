@@ -1,1 +1,11 @@
+<!-- Security Audit Dashboard Template -->
 
+<html>
+<head>
+    <title>Security Audit Dashboard</title>
+</head>
+<body>
+    <h1>Latest Security Findings</h1>
+    <pre>{{ findings | tojson(indent=2) }}</pre>
+</body>
+</html>
