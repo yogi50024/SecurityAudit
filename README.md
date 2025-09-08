@@ -11,18 +11,22 @@
 - Place your SSH private key at `~/.ssh/id_rsa` or set path with `DO_SSH_KEY_PATH`.
 - Set SSH user as `DO_SSH_USER` (default is `root`).
 - Ensure your SSH key is authorized on all droplets you wish to scan.
-
 ## Features
-- Fetch and scan all DigitalOcean Droplets and Firewalls via API
-- SSH into droplets and run local scans
-- Scan application repos and files
-- Scheduled scans, reporting, CI/CD integration, dashboard
+ DigitalOcean Droplet & Firewall scan
+- Full dependency inventory (Debian, RPM, Python, Node)
+- Unified CVE scan (OSV API, cached)
+- SSH remote scan, Port scan, malware scan, local firewall scan
+- Severity filtering & fail threshold (set FAIL_SEVERITY env var)
+- HTML and JSON report generation
+- Dashboard displays HTML report
 
 ## Usage
-- Run scheduled scans: `python scheduler/schedule_scans.py`
-- Integrate with CI/CD: call `python ci_cd/pipeline_hook.py`
-- View dashboard: `python dashboard/app.py`
-- Run tests: `python -m unittest discover tests`
+
+```bash
+export DIGITALOCEAN_TOKEN=your_token
+export FAIL_SEVERITY=HIGH  # or CRITICAL/MEDIUM/LOW
+python run_audit.py
+python dashboard/app.py  # then visit http://127.0.0.1:5000/
 
 ## Directory Structure and modules
 security-audit-mvp/
