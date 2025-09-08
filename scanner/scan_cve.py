@@ -57,7 +57,6 @@ def scan_cve(packages, batch_size=90, timeout=30):
             continue
         key = _cache_key(p)
         if key in cache:
-            # Already cached
             for v in cache[key]:
                 vulns.append(v)
         else:
@@ -90,9 +89,8 @@ def scan_cve(packages, batch_size=90, timeout=30):
                     severity_entries = v.get("severity", [])
                     cvss_score = None
                     for sev in severity_entries:
-                        s_val = sev.get("score")
                         try:
-                            cvss_score = float(s_val)
+                            cvss_score = float(sev.get("score"))
                             break
                         except Exception:
                             continue
@@ -104,12 +102,11 @@ def scan_cve(packages, batch_size=90, timeout=30):
                         "summary": v.get("summary"),
                         "aliases": v.get("aliases") or [],
                         "severity": severity_entries,
-                        "affected_ranges": v.get("affected") or [],
                         "cvss_score": cvss_score,
                         "cvss_severity": _cvss_severity(cvss_score)
                     }
                     entry_list.append(entry)
-                    vulns.append(entry)
+                vulns += entry_list
                 cache[key] = entry_list
         except Exception:
             continue
