@@ -1,32 +1,25 @@
-"""
-Flask Dashboard App
-
-Displays the latest scan report and findings on a web dashboard.
-"""
-
-from flask import Flask, render_template, jsonify
-import json
+from flask import Flask, render_template, send_from_directory
 import os
 
 app = Flask(__name__)
 
 @app.route("/")
-def home():
-    report_file = "report.json"
-    findings = {}
-    if os.path.exists(report_file):
-        with open(report_file) as f:
+def dashboard():
+    # Parse summary and metadata from report.json for top section
+    try:
+        import json
+        with open("report.json") as f:
             findings = json.load(f)
-    return render_template("dashboard.html", findings=findings)
+            summary = findings.get("summary", {})
+            metadata = findings.get("metadata", {})
+    except Exception:
+        summary = {}
+        metadata = {}
+    return render_template("report.html", summary=summary, metadata=metadata)
 
-@app.route("/api/findings")
-def api_findings():
-    report_file = "report.json"
-    findings = {}
-    if os.path.exists(report_file):
-        with open(report_file) as f:
-            findings = json.load(f)
-    return jsonify(findings)
+@app.route("/static/report.html")
+def serve_html_report():
+    return send_from_directory(os.getcwd(), "report.html")
 
 if __name__ == "__main__":
     app.run(debug=True)
