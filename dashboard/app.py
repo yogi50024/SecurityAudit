@@ -1,13 +1,12 @@
 from flask import Flask, render_template, send_from_directory
 import os
+import json
 
 app = Flask(__name__)
 
 @app.route("/")
 def dashboard():
-    # Parse summary and metadata from report.json for top section
     try:
-        import json
         with open("report.json") as f:
             findings = json.load(f)
             summary = findings.get("summary", {})
