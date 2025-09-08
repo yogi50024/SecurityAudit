@@ -6,23 +6,32 @@ Schedules regular scans using the `schedule` library.
 
 import schedule
 import time
-from scanner.scan_do_droplets import scan_do_droplets
-from scanner.scan_do_firewalls import scan_do_firewalls
-from reports.report_generator import generate_report
+import subprocess
+import logging
 
-def run_all_scans():
-    droplet_findings = scan_do_droplets()
-    fw_findings = scan_do_firewalls()
-    findings = {
-        "droplets": droplet_findings,
-        "firewalls": fw_findings,
-    }
-    generate_report(findings)
+def run_audit():
+    logging.info("Starting scheduled audit...")
+    result = subprocess.run(["python", "run_audit.py"])
+    if result.returncode == 10:
+        logging.error("Security audit failed! Findings above threshold detected.")
+    else:
+        logging.info("Security audit passed.")
 
-schedule.every().day.at("03:00").do(run_all_scans)
+def main():
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s | %(levelname)-8s | %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
+    # Schedule the audit to run once a day at midnight
+    schedule.every().day.at("00:00").do(run_audit)
+    # You can add more schedules if needed:
+    # schedule.every().hour.do(run_audit)
 
-if __name__ == "__main__":
-    print("Starting the scan scheduler...")
+    logging.info("Scheduler started. Waiting for jobs...")
     while True:
         schedule.run_pending()
         time.sleep(60)
+
+if __name__ == "__main__":
+    main()
