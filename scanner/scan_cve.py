@@ -4,27 +4,114 @@ CVE Vulnerability Scanner
 Checks system packages and dependencies against public CVE databases for known vulnerabilities.
 """
 
-import requests
+"""
+Unified CVE Scanner via OSV API with Caching
 
-def scan_cve(packages):
-    """
-    Checks a list of packages against a public CVE API.
-    Returns: list of vulnerable packages with CVE info.
-    """
-    results = []
-    cve_api = "https://cve.circl.lu/api/search/"
-    for pkg in packages:
+Uses OSV batch API to query vulnerabilities for collected packages.
+Caches results in .osv_cache.json (can be changed as needed).
+"""
+
+import requests
+import math
+import json
+import os
+import hashlib
+
+OSV_BATCH_URL = "https://api.osv.dev/v1/querybatch"
+CACHE_FILE = ".osv_cache.json"
+
+def _cvss_severity(score):
+    if score is None:
+        return "UNKNOWN"
+    if score >= 9.0: return "CRITICAL"
+    if score >= 7.0: return "HIGH"
+    if score >= 4.0: return "MEDIUM"
+    return "LOW"
+
+def _get_cache():
+    if os.path.exists(CACHE_FILE):
         try:
-            resp = requests.get(cve_api + pkg)
+            with open(CACHE_FILE, "r") as f:
+                return json.load(f)
+        except Exception:
+            return {}
+    return {}
+
+def _save_cache(cache):
+    with open(CACHE_FILE, "w") as f:
+        json.dump(cache, f)
+
+def _cache_key(pkg):
+    return hashlib.sha256(f"{pkg['ecosystem']}|{pkg['name'].lower()}|{pkg['version']}".encode()).hexdigest()
+
+def scan_cve(packages, batch_size=90, timeout=30):
+    vulns = []
+    if not packages:
+        return vulns
+
+    cache = _get_cache()
+    queries = []
+    batch_map = []
+    for p in packages:
+        if not all(k in p for k in ("name", "version", "ecosystem")):
+            continue
+        key = _cache_key(p)
+        if key in cache:
+            # Already cached
+            for v in cache[key]:
+                vulns.append(v)
+        else:
+            queries.append({
+                "package": {"name": p["name"], "ecosystem": p["ecosystem"]},
+                "version": p["version"]
+            })
+            batch_map.append((key, p))
+
+    if not queries:
+        return vulns
+
+    total_batches = math.ceil(len(queries) / batch_size)
+    for i in range(total_batches):
+        batch = queries[i*batch_size:(i+1)*batch_size]
+        batch_keys = batch_map[i*batch_size:(i+1)*batch_size]
+        try:
+            resp = requests.post(OSV_BATCH_URL, json={"queries": batch}, timeout=timeout)
+            if resp.status_code != 200:
+                continue
             data = resp.json()
-            if data and "results" in data and data["results"]:
-                for vuln in data["results"]:
-                    results.append({
-                        "package": pkg,
-                        "cve": vuln.get("id"),
-                        "summary": vuln.get("summary"),
-                        "published": vuln.get("Published"),
-                    })
+            results = data.get("results", [])
+            for idx, result in enumerate(results):
+                pkg_query = batch[idx]
+                pkg_meta = batch_keys[idx][1]
+                key = batch_keys[idx][0]
+                these_vulns = result.get("vulns") or []
+                entry_list = []
+                for v in these_vulns:
+                    severity_entries = v.get("severity", [])
+                    cvss_score = None
+                    for sev in severity_entries:
+                        s_val = sev.get("score")
+                        try:
+                            cvss_score = float(s_val)
+                            break
+                        except Exception:
+                            continue
+                    entry = {
+                        "package": pkg_meta["name"],
+                        "version": pkg_meta["version"],
+                        "ecosystem": pkg_meta["ecosystem"],
+                        "vuln_id": v.get("id"),
+                        "summary": v.get("summary"),
+                        "aliases": v.get("aliases") or [],
+                        "severity": severity_entries,
+                        "affected_ranges": v.get("affected") or [],
+                        "cvss_score": cvss_score,
+                        "cvss_severity": _cvss_severity(cvss_score)
+                    }
+                    entry_list.append(entry)
+                    vulns.append(entry)
+                cache[key] = entry_list
         except Exception:
             continue
-    return results
+    _save_cache(cache)
+    return vulns
