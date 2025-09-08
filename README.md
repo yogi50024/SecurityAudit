@@ -23,3 +23,43 @@
 - Integrate with CI/CD: call `python ci_cd/pipeline_hook.py`
 - View dashboard: `python dashboard/app.py`
 - Run tests: `python -m unittest discover tests`
+
+## Directory Structure and modules
+security-audit-mvp/
+│
+├── scanner/
+│   ├── __init__.py
+│   ├── scan_dependencies.py		 #Scans application directories for dependency files (requirements.txt, package.json) and checks for outdated packages.
+│   ├── scan_ports.py				     #Checks for open and potentially vulnerable ports on a droplet.
+│   ├── scan_firewall.py		  	 #Checks the local firewall configuration (e.g., UFW or iptables) on a droplet for common misconfigurations.
+│   ├── scan_cve.py					     #Checks system packages and dependencies against public CVE databases for known vulnerabilities.
+│   ├── scan_malware.py			   	 #Scans files and directories for suspicious patterns and malware signatures using regex rules.
+│   ├── do_client.py             # DigitalOcean API client - Handles communication with the DigitalOcean API to fetch information about droplets, firewalls, and other resources.
+│   ├── scan_do_firewalls.py     # Checks firewall rules for overly permissive configurations or missing attachments.
+│   ├── scan_do_droplets.py      # Analyzes droplet configuration for common security issues (public IP exposure, missing backups, lack of tags).
+│   └── ssh_scan.py              # Connects via SSH to each droplet to perform deeper scans, such as package updates, local firewalls, and suspicious processes.
+│
+├── reports/
+│   ├── report_generator.py			 #Aggregates scanner findings and produces JSON or HTML reports with severity and remediation guidance.
+│   └── email_alerts.py				   #Sends security report summaries to configured recipients using SMTP.
+│
+├── scheduler/
+│   └── schedule_scans.py			   #Schedules regular scans using the `schedule` library.
+│
+├── ci_cd/
+│   └── pipeline_hook.py		   	 #Runs scans automatically during code deployment or integration.
+│
+├── dashboard/
+│   ├── app.py						       #Displays the latest scan report and findings on a web dashboard.
+│   ├── auth.py
+│   └── templates/
+│       ├── dashboard.html
+│       └── login.html
+│
+├── tests/
+│   ├── test_scanners.py
+│   └── test_signatures.py
+│
+├── requirements.txt                 
+├── README.md                      
+
